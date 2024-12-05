@@ -18,9 +18,15 @@ else
     echo "...Using Chrome from cache"
 fi
 
-# Download ChromeDriver
+# Get the Chrome version
 CHROME_VERSION=$($STORAGE_DIR/chrome/opt/google/chrome/chrome --version | awk '{print $3}')
+echo "Chrome Version: $CHROME_VERSION"  # Log the version to check if it's correct
+
+# Now fetch the correct ChromeDriver version for this Chrome version
 DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+echo "ChromeDriver Version: $DRIVER_VERSION"  # Log the driver version to check if it's correct
+
+# Download ChromeDriver
 wget -P $STORAGE_DIR/chrome/ https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
 unzip $STORAGE_DIR/chrome/chromedriver_linux64.zip -d $STORAGE_DIR/chrome/
 rm $STORAGE_DIR/chrome/chromedriver_linux64.zip
