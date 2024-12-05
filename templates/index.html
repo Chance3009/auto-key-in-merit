@@ -96,11 +96,7 @@
             contentType: false,
             processData: false,
             success: function (response) {
-              if (response.status === 'success') {
-                $('#status').text(response.message)
-              } else {
-                $('#status').text(response.message)
-              }
+              $('#progress-bar').css('width', response.progress + '%')
             },
             error: function () {
               $('#status').text('Error occurred during process.')
@@ -110,7 +106,7 @@
           // Periodically check the progress and update the progress bar
           const progressInterval = setInterval(function () {
             $.ajax({
-              url: '/progress', // Your backend should return { "progress": <percentage> }
+              url: '/progress',
               success: function (response) {
                 console.log('Progress:', response) // Log the response for debugging
                 const progress = response.progress

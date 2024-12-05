@@ -3,3 +3,4 @@ pandas
 openpyxl
 selenium
 webdriver-manager
+google-chrome-stable
