@@ -2,9 +2,11 @@ from flask import Flask, render_template, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import time
+import subprocess
 
 app = Flask(__name__)
 
@@ -78,5 +80,17 @@ def process():
 def get_progress():
     return jsonify({"progress": progress})
 
+
+@app.route('/check-chrome')
+def check_chrome():
+    try:
+        # Run the command to check Chrome version
+        chrome_version = subprocess.check_output(
+            ['google-chrome', '--version']).decode('utf-8')
+        return f"Chrome is installed: {chrome_version}"
+    except subprocess.CalledProcessError:
+        return "Chrome is not installed."
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050)
+    app.run(host="0.0.0.0", port=5050, debug=True)
