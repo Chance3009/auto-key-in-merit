@@ -19,15 +19,16 @@ def process_data(url, matric_numbers):
     total = len(matric_numbers)
 
     # Configure Chrome options for headless mode
-    options = webdriver.ChromeOptions()
+    options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.binary_location = '/opt/render/project/.render/chrome/opt/google/chrome/chrome'
+    service = Service('/opt/render/project/.render/chrome/chromedriver')
 
     # Initialize WebDriver
-    driver = webdriver.Chrome(service=Service(
-        ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(service=service, options=options)
     driver.get(url)
 
     try:

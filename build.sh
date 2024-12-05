@@ -3,35 +3,30 @@
 set -o errexit
 
 # Define storage directory for Render environment
+# Install Chrome (as before)
 STORAGE_DIR=/opt/render/project/.render
 
-# Check if Chrome is already downloaded; if not, download and extract it
 if [[ ! -d $STORAGE_DIR/chrome ]]; then
-  echo "...Downloading Chrome"
-  
-  # Create directory for Chrome installation
-  mkdir -p $STORAGE_DIR/chrome
-  
-  # Change to the storage directory and download Chrome
-  cd $STORAGE_DIR/chrome
-  
-  # Download the latest stable version of Google Chrome
-  wget -P ./ https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-  
-  # Extract the package to the storage directory
-  dpkg -x ./google-chrome-stable_current_amd64.deb $STORAGE_DIR/chrome
-  
-  # Clean up the downloaded .deb package
-  rm ./google-chrome-stable_current_amd64.deb
-  
-  # Return to the project source directory
-  cd $HOME/project/src
+    echo "...Downloading Chrome"
+    mkdir -p $STORAGE_DIR/chrome
+    cd $STORAGE_DIR/chrome
+    wget -P ./ https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    dpkg -x ./google-chrome-stable_current_amd64.deb $STORAGE_DIR/chrome
+    rm ./google-chrome-stable_current_amd64.deb
+    cd $HOME/project/src
 else
-  echo "...Using Chrome from cache"
+    echo "...Using Chrome from cache"
 fi
 
-# Add Chrome's location to the PATH so it's accessible during execution
-export PATH="${PATH}:${STORAGE_DIR}/chrome/opt/google/chrome"
+# Download ChromeDriver
+CHROME_VERSION=$($STORAGE_DIR/chrome/opt/google/chrome/chrome --version | awk '{print $3}')
+DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+wget -P $STORAGE_DIR/chrome/ https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
+unzip $STORAGE_DIR/chrome/chromedriver_linux64.zip -d $STORAGE_DIR/chrome/
+rm $STORAGE_DIR/chrome/chromedriver_linux64.zip
+
+# Add Chrome and ChromeDriver to the PATH
+export PATH="$STORAGE_DIR/chrome/opt/google/chrome:$STORAGE_DIR/chrome:$PATH"
 
 # Optionally, you can verify the Chrome installation
 google-chrome --version
