@@ -5,7 +5,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
-import time
 import subprocess
 
 app = Flask(__name__)
@@ -23,7 +22,6 @@ def process_data(url, matric_numbers):
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
     options.binary_location = '/opt/render/project/.render/chrome/opt/google/chrome/chrome'
 
     # Initialize WebDriver
@@ -36,9 +34,6 @@ def process_data(url, matric_numbers):
             input_field = driver.find_element(By.NAME, "user")
             input_field.send_keys(matric_number)
             driver.find_element(By.NAME, "login").click()
-
-            # Simulate a time delay for each action and update progress
-            time.sleep(1)
 
             # Update progress
             progress = (i + 1) / total * 100

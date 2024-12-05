@@ -117,6 +117,8 @@
                 // If progress reaches 100%, stop checking
                 if (progress >= 100) {
                   clearInterval(progressInterval)
+                  $('#status').text('Process completed successfully!')
+                  $('#progress-bar').removeClass('progress-bar-striped progress-bar-animated').addClass('bg-success')
                 }
               },
               error: function () {
