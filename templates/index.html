@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Merit Input Automation</title>
+</head>
+<body>
+    <h1>Merit Input Automation</h1>
+    <form action="/process" method="post" enctype="multipart/form-data">
+        <label for="url">Website Link:</label>
+        <input type="text" id="url" name="url" required><br><br>
+        <label for="file">Excel File:</label> 
+        <input type="file" id="file" name="file" accept=".xlsx" required><br>
+        <p style="color:red;">Please rename the column for matric number to 'MATRIC'</p>
+        <button type="submit">Start Process</button>
+    </form>
+</body>
+</html>
