@@ -20,9 +20,16 @@ fi
 CHROME_VERSION=$($STORAGE_DIR/chrome/opt/google/chrome/chrome --version | awk '{print $3}')
 echo "Chrome Version: $CHROME_VERSION"
 
-# Fetch the corresponding ChromeDriver version
+# Try to fetch the ChromeDriver version
 DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-echo "ChromeDriver Version: $DRIVER_VERSION"
+
+# If the exact version is not found, fall back to a compatible version
+if [[ -z "$DRIVER_VERSION" ]]; then
+  echo "ChromeDriver version for $CHROME_VERSION not found. Trying with the closest available version..."
+  DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")  # Fallback to latest release
+fi
+
+echo "Using ChromeDriver Version: $DRIVER_VERSION"
 
 # Download the corresponding ChromeDriver
 wget "https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip" -P $STORAGE_DIR/chrome
@@ -33,3 +40,4 @@ rm $STORAGE_DIR/chrome/chromedriver_linux64.zip
 # export PATH="${PATH}:/opt/render/project/.render/chrome/opt/google/chrome"
 
 # add your own build commands...
+pip install -r requirements.txt
