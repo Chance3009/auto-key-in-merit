@@ -1,17 +1,135 @@
 <!DOCTYPE html>
-<html>
-<head>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Merit Input Automation</title>
-</head>
-<body>
-    <h1>Merit Input Automation</h1>
-    <form action="/process" method="post" enctype="multipart/form-data">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <style>
+      body {
+        background-color: #f8f9fa;
+        padding-top: 50px;
+      }
+      .container {
+        max-width: 800px;
+      }
+      h1 {
+        font-size: 2.5rem;
+        font-weight: bold;
+      }
+      h2 {
+        font-size: 1.5rem;
+        font-weight: normal;
+        color: #6c757d;
+      }
+      h3 {
+        font-size: 1rem;
+        font-weight: normal;
+        color: #007bff;
+        margin-bottom: 25px;
+      }
+      .form-label {
+        font-weight: bold;
+      }
+      .progress {
+        height: 25px;
+      }
+      button {
+        width: 100%;
+      }
+      #warning {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Merit Input Automation</h1>
+      <h2>Created by Chan Ci En</h2>
+      <h3>President of the Computer Science and Information Technology Faculty Representative CounCil (ComCil) 2024/2025</h3>
+
+      <form id="form">
         <label for="url">Website Link:</label>
-        <input type="text" id="url" name="url" required><br><br>
-        <label for="file">Excel File:</label> 
-        <input type="file" id="file" name="file" accept=".xlsx" required><br>
-        <p style="color:red;">Please rename the column for matric number to 'MATRIC'</p>
+        <input type="text" id="url" name="url" size="100%" required /><br /><br />
+
+        <label for="file">Excel File Path:</label>
+        <input type="file" id="file" name="file" required /><br /><br />
+        <p id="warning">Rename your column name with matric number to 'MATRIC'</p>
         <button type="submit">Start Process</button>
-    </form>
-</body>
+      </form>
+
+      <div class="progress mt-4">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      </div>
+
+      <p id="status"></p>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $('#form').on('submit', function (e) {
+          e.preventDefault()
+      
+          // Get form data
+          const url = $('#url').val()
+          const file = $('#file')[0].files[0]
+      
+          if (!url || !file) {
+            $('#status').text('Please provide the website link and select an Excel file.')
+            return
+          }
+      
+          // Show the progress bar
+          $('#progress-bar').width('0%')
+          $('#status').text('Starting process...')
+      
+          const formData = new FormData()
+          formData.append('url', url)
+          formData.append('file', file)
+      
+          // Make an AJAX request to start the process
+          $.ajax({
+            url: '/process',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+              if (response.status === 'success') {
+                $('#status').text(response.message)
+              } else {
+                $('#status').text(response.message)
+              }
+            },
+            error: function () {
+              $('#status').text('Error occurred during process.')
+            }
+          })
+      
+          // Periodically check the progress and update the progress bar
+          const progressInterval = setInterval(function () {
+            $.ajax({
+              url: '/progress', // Your backend should return { "progress": <percentage> }
+              success: function (response) {
+                console.log('Progress:', response) // Log the response for debugging
+                const progress = response.progress
+                $('#progress-bar')
+                  .width(progress + '%')
+                  .text(Math.round(progress) + '%')
+      
+                // If progress reaches 100%, stop checking
+                if (progress >= 100) {
+                  clearInterval(progressInterval)
+                }
+              },
+              error: function () {
+                console.log('Error fetching progress')
+              }
+            })
+          }, 1000) // Check every 1 second
+        })
+      })
+    </script>
+  </body>
 </html>
