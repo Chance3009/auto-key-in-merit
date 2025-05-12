@@ -1,46 +1,39 @@
 from flask import Flask, render_template, request, jsonify
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
-import subprocess
+import requests
 
 app = Flask(__name__)
-
 progress = 0
+total_count = 0  
 
 
 def process_data(url, matric_numbers):
-    global progress
+    global progress, total_count
     progress = 0
-    total = len(matric_numbers)
+    total_count = len(matric_numbers)
 
-    # Configure Chrome options for headless mode
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.binary_location = '/opt/render/project/.render/chrome/opt/google/chrome/chrome'
+    session = requests.Session()
 
-    # Initialize WebDriver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    driver.get(url)
+    for i, matric in enumerate(matric_numbers):
+        # Simulate the POST request
+        payload = {
+            "user": matric,
+            "login": "Login"
+        }
 
-    try:
-        # Loop through each matric number and process it
-        for i, matric_number in enumerate(matric_numbers):
-            input_field = driver.find_element(By.NAME, "user")
-            input_field.send_keys(matric_number)
-            driver.find_element(By.NAME, "login").click()
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": url,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
 
-            # Update progress
-            progress = (i + 1) / total * 100
+        try:
+            response = session.post(url, data=payload, headers=headers)
+            # You can parse HTML here to detect success/failure (optional)
+        except Exception as e:
+            print(f"Error on {matric}: {e}")
 
-        driver.quit()
-    except Exception as e:
-        driver.quit()
+        progress = (i + 1) / total_count * 100
 
 
 @app.route("/")
@@ -51,21 +44,17 @@ def home():
 @app.route("/process", methods=["POST"])
 def process():
     global progress
-    progress = 0  # Reset progress at the start
+    progress = 0
 
-    # Get the form data (URL and Excel file)
     url = request.form["url"]
     file = request.files["file"]
-
-    if not url or not file:
-        return "Please provide the website link and an Excel file."
+    column = request.form.get("column", "MATRIC")
 
     df = pd.read_excel(file)
-    if "MATRIC" not in df.columns:
-        return "Error: Column 'MATRIC' not found. Please rename it."
+    if column not in df.columns:
+        return f"Error: Column '{column}' not found."
 
-    matric_numbers = df["MATRIC"].tolist()
-
+    matric_numbers = df[column].dropna().astype(str).str.strip().drop_duplicates().tolist()
     process_data(url, matric_numbers)
 
     return jsonify({"status": "success", "message": "Process started!"})
@@ -73,18 +62,11 @@ def process():
 
 @app.route("/progress")
 def get_progress():
-    return jsonify({"progress": progress})
-
-
-@app.route('/check-chrome')
-def check_chrome():
-    try:
-        # Run the command to check Chrome version
-        chrome_version = subprocess.check_output(
-            ['google-chrome', '--version']).decode('utf-8')
-        return f"Chrome is installed: {chrome_version}"
-    except subprocess.CalledProcessError:
-        return "Chrome is not installed."
+    return jsonify({
+        "progress": progress,
+        "total": total_count,
+        "current": int(progress * total_count / 100)
+    })
 
 
 if __name__ == "__main__":

@@ -4,91 +4,147 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Merit Input Automation</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous" />
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+      :root {
+        --bs-primary: #007bff;
+        --bs-secondary: #6c757d;
+        --bs-body-bg: #ffffff;
+        --bs-body-color: #333333;
+      }
+      
       body {
-        background-color: #f8f9fa;
-        padding-top: 50px;
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+        padding-top: 40px;
       }
+      
       .container {
-        max-width: 800px;
+        max-width: 700px;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
       }
+      
       h1 {
-        font-size: 2.5rem;
-        font-weight: bold;
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--bs-primary);
       }
-      h2 {
-        font-size: 1.5rem;
-        font-weight: normal;
-        color: #6c757d;
-      }
-      h3 {
-        font-size: 1rem;
-        font-weight: normal;
-        color: #007bff;
-        margin-bottom: 25px;
-      }
+      
       .form-label {
-        font-weight: bold;
+        font-weight: 500;
+        color: #212529;
       }
+      
+      input[type='file'],
+      input[type='text'],
+      input[type='url'] {
+        border: 1px solid var(--bs-secondary);
+        border-radius: 0.5rem;
+      }
+      
+      .btn-primary {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        border-radius: 0.5rem;
+      }
+      
+      .btn-primary:hover {
+        background-color: #0069d9;
+      }
+      
       .progress {
-        height: 25px;
+        height: 30px;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background-color: #e9ecef;
       }
-      button {
-        width: 100%;
+      
+      .progress-bar {
+        background-color: var(--bs-primary);
       }
-      #warning {
-        color: red;
+      
+      #status {
+        margin-top: 10px;
+        font-weight: 500;
+        color: #dc3545;
+      }
+      
+      #progress-info {
+        font-style: italic;
+        color: var(--bs-secondary);
+      }
+      
+      .form-text {
+        font-size: 0.875rem;
+        color: var(--bs-secondary);
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Merit Input Automation</h1>
-      <h2>Created by Chan Ci En</h2>
-      <h3>President of the Computer Science and Information Technology Faculty Representative CounCil (ComCil) 2024/2025</h3>
+      <h1 class="mb-1">Merit Input Automation</h1>
+      <p class="text-muted mb-4">By Chan Ci En · President, ComCil FCSIT 2024/2025</p>
 
       <form id="form">
-        <label for="url">Website Link:</label>
-        <input type="text" id="url" name="url" size="100%" required /><br /><br />
+        <div class="mb-3">
+          <label for="url" class="form-label">Activity URL</label>
+          <input type="url" class="form-control" id="url" name="url" required placeholder="Paste URL with ?ev=..." />
+        </div>
 
-        <label for="file">Excel File Path:</label>
-        <input type="file" id="file" name="file" required /><br /><br />
-        <p id="warning">Rename your column name with matric number to 'MATRIC'</p>
-        <button type="submit">Start Process</button>
+        <div class="mb-3">
+          <label for="file" class="form-label">Upload Excel File</label>
+          <input type="file" class="form-control" id="file" name="file" accept=".xlsx" required />
+          <div class="form-text text-danger">Make sure your Excel has a 'MATRIC' column (or any name you specify below).</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="column" class="form-label">Column Name</label>
+          <input type="text" class="form-control" id="column" name="column" placeholder="MATRIC" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Start Processing</button>
       </form>
 
-      <div class="progress mt-4">
-        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      <div class="progress mt-4" style="display: none;">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;">0%</div>
       </div>
 
-      <p id="status"></p>
+      <p id="progress-info" class="text-muted mt-2"></p>
+      <p id="status" class="text-danger mt-1"></p>
     </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
       $(document).ready(function () {
         $('#form').on('submit', function (e) {
           e.preventDefault()
       
-          // Get form data
           const url = $('#url').val()
           const file = $('#file')[0].files[0]
+          const column = $('#column').val()
       
-          if (!url || !file) {
-            $('#status').text('Please provide the website link and select an Excel file.')
+          if (!url || !file || !column) {
+            $('#status').text('Please fill all fields and upload a file.')
             return
           }
-      
-          // Show the progress bar
-          $('#progress-bar').width('0%')
-          $('#status').text('Starting process...')
       
           const formData = new FormData()
           formData.append('url', url)
           formData.append('file', file)
+          formData.append('column', column)
       
-          // Make an AJAX request to start the process
+          // Reset UI
+          $('#progress-bar').width('0%').text('0%')
+          $('#progress-info').text('')
+          $('#status').text('')
+          $('.progress').show()
+      
+          // Start process
           $.ajax({
             url: '/process',
             type: 'POST',
@@ -96,36 +152,32 @@
             contentType: false,
             processData: false,
             success: function (response) {
-              $('#progress-bar').css('width', response.progress + '%')
+              $('#status').text(response.message)
             },
-            error: function () {
-              $('#status').text('Error occurred during process.')
+            error: function (xhr) {
+              $('#status').text(xhr.responseText || 'An error occurred.')
             }
           })
       
-          // Periodically check the progress and update the progress bar
-          const progressInterval = setInterval(function () {
-            $.ajax({
-              url: '/progress',
-              success: function (response) {
-                console.log('Progress:', response) // Log the response for debugging
-                const progress = response.progress
-                $('#progress-bar')
-                  .width(progress + '%')
-                  .text(Math.round(progress) + '%')
+          // Poll progress
+          const interval = setInterval(function () {
+            $.get('/progress', function (res) {
+              const p = Math.round(res.progress)
+              const total = res.total || 0
+              const current = res.current || 0
       
-                // If progress reaches 100%, stop checking
-                if (progress >= 100) {
-                  clearInterval(progressInterval)
-                  $('#status').text('Process completed successfully!')
-                  $('#progress-bar').removeClass('progress-bar-striped progress-bar-animated').addClass('bg-success')
-                }
-              },
-              error: function () {
-                console.log('Error fetching progress')
+              $('#progress-bar')
+                .css('width', p + '%')
+                .text(p + '%')
+              $('#progress-info').text(`Processing ${current} of ${total} entries...`)
+      
+              if (p >= 100) {
+                clearInterval(interval)
+                $('#progress-bar').removeClass('progress-bar-striped progress-bar-animated').addClass('bg-success')
+                $('#status').text('✅ Process completed!')
               }
             })
-          }, 1000) // Check every 1 second
+          }, 1000)
         })
       })
     </script>
