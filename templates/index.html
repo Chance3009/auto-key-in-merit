@@ -1,185 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Merit Input Automation</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <style>
-      :root {
-        --bs-primary: #007bff;
-        --bs-secondary: #6c757d;
-        --bs-body-bg: #ffffff;
-        --bs-body-color: #333333;
-      }
-      
-      body {
-        background-color: var(--bs-body-bg);
-        color: var(--bs-body-color);
-        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-        padding-top: 40px;
-      }
-      
-      .container {
-        max-width: 700px;
-        background: white;
-        padding: 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-      }
-      
-      h1 {
-        font-size: 2rem;
-        font-weight: 600;
-        color: var(--bs-primary);
-      }
-      
-      .form-label {
-        font-weight: 500;
-        color: #212529;
-      }
-      
-      input[type='file'],
-      input[type='text'],
-      input[type='url'] {
-        border: 1px solid var(--bs-secondary);
-        border-radius: 0.5rem;
-      }
-      
-      .btn-primary {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
-        border-radius: 0.5rem;
-      }
-      
-      .btn-primary:hover {
-        background-color: #0069d9;
-      }
-      
-      .progress {
-        height: 30px;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        background-color: #e9ecef;
-      }
-      
-      .progress-bar {
-        background-color: var(--bs-primary);
-      }
-      
-      #status {
-        margin-top: 10px;
-        font-weight: 500;
-        color: #dc3545;
-      }
-      
-      #progress-info {
-        font-style: italic;
-        color: var(--bs-secondary);
-      }
-      
-      .form-text {
-        font-size: 0.875rem;
-        color: var(--bs-secondary);
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1 class="mb-1">Merit Input Automation</h1>
-      <p class="text-muted mb-4">By Chan Ci En · President, ComCil FCSIT 2024/2025</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Merit Input Automation</title>
 
-      <form id="form">
-        <div class="mb-3">
-          <label for="url" class="form-label">Activity URL</label>
-          <input type="url" class="form-control" id="url" name="url" required placeholder="Paste URL with ?ev=..." />
-        </div>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        <div class="mb-3">
-          <label for="file" class="form-label">Upload Excel File</label>
-          <input type="file" class="form-control" id="file" name="file" accept=".xlsx" required />
-          <div class="form-text text-danger">Make sure your Excel has a 'MATRIC' column (or any name you specify below).</div>
-        </div>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8f9fa;
+      padding: 2rem;
+    }
+    .card {
+      border-radius: 1rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    }
+    .dark-mode {
+      background-color: #121212 !important;
+      color: #e0e0e0 !important;
+    }
+    .dark-mode .card,
+    .dark-mode .form-control,
+    .dark-mode .form-select,
+    .dark-mode .nav-link,
+    .dark-mode .form-check-label,
+    .dark-mode .list-group-item,
+    .dark-mode .text-muted {
+      background-color: #1f1f1f !important;
+      color: #e0e0e0 !important;
+      border-color: #444 !important;
+    }
 
-        <div class="mb-3">
-          <label for="column" class="form-label">Column Name</label>
-          <input type="text" class="form-control" id="column" name="column" placeholder="MATRIC" required />
-        </div>
+    small.text-muted {
+      font-size: 0.9rem;
+    }
 
-        <button type="submit" class="btn btn-primary w-100">Start Processing</button>
-      </form>
-
-      <div class="progress mt-4" style="display: none;">
-        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;">0%</div>
+    .progress {
+      height: 25px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+     <div>
+        <h1 class="fw-bold mb-0">Merit Input Automation</h1>
+        <small class="text-muted">Created by Chan Ci En — President of ComCil 2024/2025</small>
       </div>
-
-      <p id="progress-info" class="text-muted mt-2"></p>
-      <p id="status" class="text-danger mt-1"></p>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="darkModeToggle">
+        <label class="form-check-label" for="darkModeToggle">🌙 Dark Mode</label>
+      </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-      $(document).ready(function () {
-        $('#form').on('submit', function (e) {
-          e.preventDefault()
-      
-          const url = $('#url').val()
-          const file = $('#file')[0].files[0]
-          const column = $('#column').val()
-      
-          if (!url || !file || !column) {
-            $('#status').text('Please fill all fields and upload a file.')
-            return
+    <!-- Stepper -->
+    <ul class="nav nav-pills mb-3">
+      <li class="nav-item"><a id="step-upload" class="nav-link active">1. Upload</a></li>
+      <li class="nav-item"><a id="step-processing" class="nav-link disabled">2. Processing</a></li>
+      <li class="nav-item"><a id="step-done" class="nav-link disabled">3. Done</a></li>
+    </ul>
+
+    <!-- Form card -->
+    <div class="card p-4 mb-4">
+      <form id="form">
+        <div class="mb-3">
+          <label for="url" class="form-label">Website Link</label>
+          <input type="text" id="url" name="url" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label for="file" class="form-label">Excel File</label>
+          <input type="file" id="file" name="file" class="form-control" required />
+        </div>
+
+        <div class="mb-3" style="display: none;" id="column-select-wrapper">
+          <label for="column-select" class="form-label">Select Matric Column</label>
+          <select id="column-select" class="form-select"></select>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Start Process</button>
+      </form>
+
+      <div id="progress-section" class="mt-3" style="display: none;">
+        <p id="progress-count" class="text-muted">Processing 0 of 0</p>
+        <div class="progress mb-2">
+          <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col">
+            <div class="card bg-success text-white">
+              <div class="card-body">
+                <h5 class="card-title">Success</h5>
+                <p id="success-count" class="card-text">0</p>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card bg-danger text-white">
+              <div class="card-body">
+                <h5 class="card-title">Errors</h5>
+                <p id="error-count" class="card-text">0</p>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card bg-warning text-white">
+              <div class="card-body">
+                <h5 class="card-title">Failed</h5>
+                <p id="failed-count" class="card-text">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p id="status" class="mt-3 text-info"></p>
+    </div>
+
+    <!-- Upload history -->
+    <div class="card">
+      <div class="card-header">📊 Last 5 Uploads</div>
+      <ul class="list-group list-group-flush" id="upload-history">
+        <li class="list-group-item">Loading...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Dark mode toggle
+    $('#darkModeToggle').on('change', function () {
+      $('body').toggleClass('dark-mode');
+    });
+
+    // Column detection
+    $('#file').on('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        const headers = json[0];
+
+        const select = $('#column-select');
+        select.empty().append('<option disabled selected>Select column</option>');
+        headers.forEach(h => {
+          if (h) select.append(`<option value="${h}">${h}</option>`);
+        });
+        $('#column-select-wrapper').show();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Upload history
+    function updateHistory(historyData) {
+      const container = $('#upload-history');
+      container.empty();
+      historyData.forEach(entry => {
+        container.append(`
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>${entry.date}</strong>
+                <br>
+                <small class="text-muted">Total: ${entry.count} entries</small>
+              </div>
+              <div>
+                <span class="badge bg-success">${entry.success_count}</span>
+                <span class="badge bg-danger">${entry.error_count}</span>
+                <span class="badge bg-warning">${entry.failed_count}</span>
+              </div>
+            </div>
+          </li>
+        `);
+      });
+    }
+
+    // Load initial history
+    $.get('/history', function(data) {
+      updateHistory(data);
+    });
+
+    // Submit form
+    $('#form').on('submit', function (e) {
+      e.preventDefault();
+
+      const url = $('#url').val();
+      const file = $('#file')[0].files[0];
+      const column = $('#column-select').val() || 'MATRIC';
+
+      if (!url || !file) {
+        $('#status').text('Please provide the website link and select an Excel file.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('url', url);
+      formData.append('file', file);
+      formData.append('column', column);
+
+      $('#status').text('Uploading and starting process...');
+      $('#progress-bar').css('width', '0%').text('0%');
+      $('#progress-count').text('Processing 0 of 0');
+      $('#progress-section').show();
+      $('#success-count').text('0');
+      $('#error-count').text('0');
+      $('#failed-count').text('0');
+
+      $.ajax({
+        url: '/process',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (response) {
+          $('#status').text('Process started!');
+          $('#step-upload').removeClass('active').addClass('disabled');
+          $('#step-processing').removeClass('disabled').addClass('active');
+          
+          // Update counts
+          const results = response.results;
+          $('#success-count').text(results.filter(r => r.status === 'success').length);
+          $('#error-count').text(results.filter(r => r.status === 'error').length);
+          $('#failed-count').text(results.filter(r => r.status === 'failed').length);
+          
+          // Update history with the new data from response
+          updateHistory(response.history);
+        },
+        error: function () {
+          $('#status').text('An error occurred.');
+        }
+      });
+
+      const interval = setInterval(() => {
+        $.get('/progress', function (data) {
+          const { progress, current, total } = data;
+          updateProgress(current, total);
+          if (progress >= 100) {
+            clearInterval(interval);
+            $('#status').text('✅ Process completed successfully!');
+            $('#progress-bar').removeClass('progress-bar-animated').addClass('bg-success');
+            $('#step-processing').removeClass('active').addClass('disabled');
+            $('#step-done').removeClass('disabled').addClass('active');
           }
-      
-          const formData = new FormData()
-          formData.append('url', url)
-          formData.append('file', file)
-          formData.append('column', column)
-      
-          // Reset UI
-          $('#progress-bar').width('0%').text('0%')
-          $('#progress-info').text('')
-          $('#status').text('')
-          $('.progress').show()
-      
-          // Start process
-          $.ajax({
-            url: '/process',
-            type: 'POST',
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function (response) {
-              $('#status').text(response.message)
-            },
-            error: function (xhr) {
-              $('#status').text(xhr.responseText || 'An error occurred.')
-            }
-          })
-      
-          // Poll progress
-          const interval = setInterval(function () {
-            $.get('/progress', function (res) {
-              const p = Math.round(res.progress)
-              const total = res.total || 0
-              const current = res.current || 0
-      
-              $('#progress-bar')
-                .css('width', p + '%')
-                .text(p + '%')
-              $('#progress-info').text(`Processing ${current} of ${total} entries...`)
-      
-              if (p >= 100) {
-                clearInterval(interval)
-                $('#progress-bar').removeClass('progress-bar-striped progress-bar-animated').addClass('bg-success')
-                $('#status').text('✅ Process completed!')
-              }
-            })
-          }, 1000)
-        })
-      })
-    </script>
-  </body>
+        });
+      }, 1000);
+    });
+
+    // Progress updater
+    function updateProgress(current, total) {
+      $('#progress-count').text(`Processing ${current} of ${total}`);
+      const percent = (current / total * 100).toFixed(1);
+      $('#progress-bar').css('width', percent + '%').text(percent + '%');
+    }
+  </script>
+</body>
 </html>
