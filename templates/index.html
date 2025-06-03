@@ -75,7 +75,8 @@
 
         <div class="mb-3">
           <label for="file" class="form-label">Excel File</label>
-          <input type="file" id="file" name="file" class="form-control" required />
+          <input type="file" id="file" name="file" class="form-control" accept=".xlsx,.xls" required />
+          <small class="text-muted">Please upload a .xlsx or .xls file</small>
         </div>
 
         <div class="mb-3" style="display: none;" id="column-select-wrapper">
@@ -161,6 +162,18 @@
       reader.readAsArrayBuffer(file);
     });
 
+    // Update progress function
+    function updateProgress(current, total) {
+      const progress = (current / total * 100).toFixed(1);
+      $('#progress-bar').css('width', progress + '%').text(progress + '%');
+      $('#progress-count').text(`Processing ${current} of ${total}`);
+      
+      if (progress >= 100) {
+        $('#step-processing').removeClass('active').addClass('disabled');
+        $('#step-done').removeClass('disabled').addClass('active');
+      }
+    }
+
     // Upload history
     function updateHistory(historyData) {
       const container = $('#upload-history');
@@ -223,6 +236,10 @@
         contentType: false,
         processData: false,
         success: function (response) {
+          if (response.error) {
+            $('#status').text('Error: ' + response.error);
+            return;
+          }
           $('#status').text('Process started!');
           $('#step-upload').removeClass('active').addClass('disabled');
           $('#step-processing').removeClass('disabled').addClass('active');
@@ -236,8 +253,16 @@
           // Update history with the new data from response
           updateHistory(response.history);
         },
-        error: function () {
-          $('#status').text('An error occurred.');
+        error: function (xhr, status, error) {
+          let errorMessage = 'An error occurred.';
+          try {
+            const response = JSON.parse(xhr.responseText);
+            errorMessage = response.error || errorMessage;
+          } catch (e) {
+            console.error('Error parsing response:', e);
+          }
+          $('#status').text('Error: ' + errorMessage);
+          console.error('Server response:', xhr.responseText);
         }
       });
 
@@ -248,20 +273,12 @@
           if (progress >= 100) {
             clearInterval(interval);
             $('#status').text('✅ Process completed successfully!');
-            $('#progress-bar').removeClass('progress-bar-animated').addClass('bg-success');
             $('#step-processing').removeClass('active').addClass('disabled');
             $('#step-done').removeClass('disabled').addClass('active');
           }
         });
       }, 1000);
     });
-
-    // Progress updater
-    function updateProgress(current, total) {
-      $('#progress-count').text(`Processing ${current} of ${total}`);
-      const percent = (current / total * 100).toFixed(1);
-      $('#progress-bar').css('width', percent + '%').text(percent + '%');
-    }
   </script>
 </body>
 </html>

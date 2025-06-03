@@ -3,12 +3,22 @@ import pandas as pd
 import requests
 from datetime import datetime
 import logging
+import traceback
+import os
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+# Ensure upload directory exists
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app = Flask(__name__, static_url_path='/static')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 progress = 0
 total_count = 0
@@ -86,6 +96,27 @@ def update_history(count, results):
     return entry
 
 
+def read_excel_file(file):
+    """Try different methods to read the Excel file."""
+    try:
+        # Try reading with default engine
+        return pd.read_excel(file)
+    except Exception as e1:
+        logger.warning(f"Failed to read with default engine: {str(e1)}")
+        try:
+            # Try with openpyxl engine
+            return pd.read_excel(file, engine='openpyxl')
+        except Exception as e2:
+            logger.warning(f"Failed to read with openpyxl: {str(e2)}")
+            try:
+                # Try with xlrd engine for older .xls files
+                return pd.read_excel(file, engine='xlrd')
+            except Exception as e3:
+                logger.error(f"All Excel reading attempts failed: {str(e3)}")
+                raise Exception(
+                    "Unable to read the Excel file. Please ensure it's a valid .xlsx or .xls file.")
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -97,34 +128,83 @@ def process():
     progress = 0
 
     try:
+        # Validate request data
+        if 'file' not in request.files:
+            logger.error("No file part in request")
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files['file']
+        if not file.filename:
+            logger.error("No file selected")
+            return jsonify({"error": "No file selected"}), 400
+
+        # Check file extension
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            logger.error("Invalid file type")
+            return jsonify({"error": "Please upload a valid Excel file (.xlsx or .xls)"}), 400
+
+        if 'url' not in request.form:
+            logger.error("No URL provided")
+            return jsonify({"error": "URL is required"}), 400
+
         url = request.form["url"]
-        file = request.files["file"]
         column = request.form.get("column", "MATRIC")
 
-        logger.debug(f"Received request - URL: {url}, Column: {column}")
+        logger.info(
+            f"Processing request - URL: {url}, File: {file.filename}, Column: {column}")
 
-        df = pd.read_excel(file)
+        try:
+            df = read_excel_file(file)
+        except Exception as e:
+            logger.error(f"Failed to read Excel file: {str(e)}")
+            return jsonify({"error": str(e)}), 400
+
+        if df.empty:
+            logger.error("Excel file is empty")
+            return jsonify({"error": "The Excel file is empty"}), 400
+
         if column not in df.columns:
+            available_columns = df.columns.tolist()
             logger.error(
-                f"Column '{column}' not found in columns: {df.columns.tolist()}")
-            return jsonify({"error": f"Column '{column}' not found."}), 400
+                f"Column '{column}' not found. Available columns: {available_columns}")
+            return jsonify({
+                "error": f"Column '{column}' not found. Available columns: {', '.join(available_columns)}"
+            }), 400
 
         matric_numbers = df[column].dropna().astype(
             str).str.strip().drop_duplicates().tolist()
-        logger.debug(f"Processing {len(matric_numbers)} matric numbers")
+
+        if not matric_numbers:
+            logger.error("No valid matric numbers found in the file")
+            return jsonify({"error": "No valid matric numbers found in the selected column"}), 400
+
+        logger.info(f"Processing {len(matric_numbers)} matric numbers")
 
         results = process_data(url, matric_numbers)
         history_entry = update_history(len(matric_numbers), results)
 
-        return jsonify({
+        response_data = {
             "status": "success",
-            "message": "Process started!",
+            "message": "Process completed successfully",
             "results": results,
-            "history": history
-        })
+            "history": history,
+            "total_processed": len(matric_numbers),
+            "successful": len([r for r in results if r["status"] == "success"]),
+            "failed": len([r for r in results if r["status"] == "failed"]),
+            "errors": len([r for r in results if r["status"] == "error"])
+        }
+
+        logger.info(f"Process completed: {response_data}")
+        return jsonify(response_data)
+
     except Exception as e:
-        logger.exception("Error in process endpoint")
-        return jsonify({"error": str(e)}), 500
+        error_details = traceback.format_exc()
+        logger.error(
+            f"Unexpected error in process endpoint: {str(e)}\n{error_details}")
+        return jsonify({
+            "error": str(e),
+            "details": error_details
+        }), 500
 
 
 @app.route("/progress")

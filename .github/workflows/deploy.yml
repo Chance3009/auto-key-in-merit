@@ -9,13 +9,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check SSH Key Format
+        run: |
+          echo "Checking SSH key format..."
+          echo "${{ secrets.SSH_KEY }}" > deploy_key
+          chmod 600 deploy_key
+          ssh-keygen -l -f deploy_key || echo "Invalid key format"
+          rm deploy_key
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          debug: true  # Added for debugging
+          port: 22
+          debug: true
           script: |
             cd ~/auto-key-in-merit
             git pull origin main
