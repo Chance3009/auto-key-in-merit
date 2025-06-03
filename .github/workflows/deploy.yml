@@ -15,62 +15,11 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          debug: true  # Added for debugging
           script: |
-            echo "Starting deployment..."
-            
-            # Navigate to project directory
-            cd ~/auto-key-in-merit || exit 1
-            
-            # Backup current state
-            echo "Creating backup..."
-            cp -r . ../auto-key-in-merit-backup-$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
-            
-            # Pull latest changes
-            echo "Pulling latest changes..."
-            git fetch origin main
-            git reset --hard origin/main
-            
-            # Update dependencies
-            echo "Updating dependencies..."
-            source venv/bin/activate || {
-              echo "Creating new virtual environment..."
-              python3 -m venv venv
-              source venv/bin/activate
-            }
-            pip install --upgrade pip
+            cd ~/auto-key-in-merit
+            git pull origin main
+            source venv/bin/activate
             pip install -r requirements.txt
-            
-            # Check if service exists, if not create it
-            if ! sudo systemctl status merit >/dev/null 2>&1; then
-              echo "Creating systemd service..."
-              echo "[Unit]
-            Description=Merit Input Automation Flask App
-            After=network.target
-
-            [Service]
-            User=$USER
-            WorkingDirectory=/home/$USER/auto-key-in-merit
-            Environment=PATH=/home/$USER/auto-key-in-merit/venv/bin
-            ExecStart=/home/$USER/auto-key-in-merit/venv/bin/python app.py
-            Restart=always
-
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/merit.service
-              sudo systemctl daemon-reload
-              sudo systemctl enable merit
-            fi
-            
-            # Restart service
-            echo "Restarting service..."
-            sudo systemctl restart merit
-            
-            # Check service status
-            echo "Checking service status..."
-            sleep 5
-            if ! sudo systemctl is-active merit >/dev/null 2>&1; then
-              echo "Service failed to start. Check logs with: sudo journalctl -u merit -n 50"
-              sudo journalctl -u merit -n 50
-              exit 1
-            fi
-            
-            echo "Deployment completed successfully!"
+            sudo /bin/systemctl restart merit
+            echo "Deployment completed!"
