@@ -2,6 +2,11 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import requests
 from datetime import datetime
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -91,25 +96,35 @@ def process():
     global progress
     progress = 0
 
-    url = request.form["url"]
-    file = request.files["file"]
-    column = request.form.get("column", "MATRIC")
+    try:
+        url = request.form["url"]
+        file = request.files["file"]
+        column = request.form.get("column", "MATRIC")
 
-    df = pd.read_excel(file)
-    if column not in df.columns:
-        return f"Error: Column '{column}' not found."
+        logger.debug(f"Received request - URL: {url}, Column: {column}")
 
-    matric_numbers = df[column].dropna().astype(
-        str).str.strip().drop_duplicates().tolist()
-    results = process_data(url, matric_numbers)
-    history_entry = update_history(len(matric_numbers), results)
+        df = pd.read_excel(file)
+        if column not in df.columns:
+            logger.error(
+                f"Column '{column}' not found in columns: {df.columns.tolist()}")
+            return jsonify({"error": f"Column '{column}' not found."}), 400
 
-    return jsonify({
-        "status": "success",
-        "message": "Process started!",
-        "results": results,
-        "history": history  # Send current history with response
-    })
+        matric_numbers = df[column].dropna().astype(
+            str).str.strip().drop_duplicates().tolist()
+        logger.debug(f"Processing {len(matric_numbers)} matric numbers")
+
+        results = process_data(url, matric_numbers)
+        history_entry = update_history(len(matric_numbers), results)
+
+        return jsonify({
+            "status": "success",
+            "message": "Process started!",
+            "results": results,
+            "history": history
+        })
+    except Exception as e:
+        logger.exception("Error in process endpoint")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/progress")
