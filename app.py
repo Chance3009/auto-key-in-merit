@@ -43,26 +43,44 @@ history = []  # Store history in memory instead of file
 @app.errorhandler(500)
 def internal_error(error):
     logger.error(f"Internal Server Error: {error}\n{traceback.format_exc()}")
-    return jsonify({
+    response = jsonify({
         "error": "Internal Server Error",
         "details": str(error)
-    }), 500
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, 500
 
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return jsonify({
+    response = jsonify({
         "error": "Not Found",
         "details": str(error)
-    }), 404
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, 404
 
 
 @app.errorhandler(400)
 def bad_request_error(error):
-    return jsonify({
+    response = jsonify({
         "error": "Bad Request",
         "details": str(error)
-    }), 400
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, 400
+
+
+# Add a catch-all error handler
+@app.errorhandler(Exception)
+def handle_exception(error):
+    logger.error(f"Unhandled Exception: {error}\n{traceback.format_exc()}")
+    response = jsonify({
+        "error": "Internal Server Error",
+        "details": str(error) if app.debug else "An unexpected error occurred"
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, 500
 
 
 def process_data(url, matric_numbers):
