@@ -14,7 +14,10 @@ jobs:
           echo "Checking SSH key format..."
           echo "${{ secrets.SSH_KEY }}" > deploy_key
           chmod 600 deploy_key
+          echo "Displaying key information:"
           ssh-keygen -l -f deploy_key || echo "Invalid key format"
+          echo "Testing SSH connection:"
+          ssh -v -i deploy_key -o StrictHostKeyChecking=no -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 22 || echo "SSH test failed"
           rm deploy_key
 
       - name: Deploy via SSH
@@ -25,10 +28,21 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           debug: true
+          command_timeout: 30m
           script: |
-            cd ~/auto-key-in-merit
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            sudo /bin/systemctl restart merit
-            echo "Deployment completed!"
+            echo "=== Deployment Started: $(date) ==="
+            echo "Current directory: $PWD"
+            echo "Testing git access..."
+            cd ~/auto-key-in-merit || echo "Failed to cd to directory"
+            git status || echo "Failed to get git status"
+            echo "Pulling latest changes..."
+            git pull origin main || echo "Failed to pull from git"
+            echo "Activating virtual environment..."
+            source venv/bin/activate || echo "Failed to activate venv"
+            echo "Installing requirements..."
+            pip install -r requirements.txt || echo "Failed to install requirements"
+            echo "Restarting service..."
+            sudo /bin/systemctl restart merit || echo "Failed to restart service"
+            echo "=== Deployment Completed: $(date) ==="
+            # Log SSH access
+            echo "Last SSH access: $(date)" >> ~/ssh_access.log
