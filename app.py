@@ -1,23 +1,36 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, url_for
 import pandas as pd
 import requests
 from datetime import datetime
 import logging
 import traceback
 import os
+import sys
 
-# Configure logging
+# Configure logging to both file and console
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 
-# Ensure upload directory exists
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Log startup information
+logger.info("Starting application...")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Current working directory: {os.getcwd()}")
 
-app = Flask(__name__, static_url_path='/static')
+# Ensure upload directory exists
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+logger.info(f"Upload directory: {UPLOAD_FOLDER}")
+
+app = Flask(__name__,
+            static_url_path='/static',
+            static_folder='static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 progress = 0
@@ -32,50 +45,70 @@ def process_data(url, matric_numbers):
     results = []
     session = requests.Session()
 
-    for i, matric in enumerate(matric_numbers):
-        try:
-            # Simulate the POST request
-            payload = {
-                "user": matric.strip(),  # Ensure no whitespace
-                "login": "Login"
-            }
+    # Process in batches of 10
+    batch_size = 10
+    for i in range(0, len(matric_numbers), batch_size):
+        batch = matric_numbers[i:i + batch_size]
+        batch_results = []
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Referer": url,
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-            }
+        for matric in batch:
+            try:
+                # Simulate the POST request
+                payload = {
+                    "user": matric.strip(),  # Ensure no whitespace
+                    "login": "Login"
+                }
 
-            response = session.post(
-                url, data=payload, headers=headers, timeout=10)
-            response.raise_for_status()  # Raise exception for bad status codes
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                    "Referer": url,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                }
 
-            # Add to results
-            results.append({
-                "matric": matric,
-                "status": "success" if response.status_code == 200 else "failed",
-                "timestamp": datetime.now().isoformat()
-            })
+                response = session.post(
+                    url, data=payload, headers=headers, timeout=5)  # 5 second timeout per request
 
-        except requests.exceptions.RequestException as e:
-            print(f"Network error for {matric}: {str(e)}")
-            results.append({
-                "matric": matric,
-                "status": "error",
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            })
-        except Exception as e:
-            print(f"Unexpected error for {matric}: {str(e)}")
-            results.append({
-                "matric": matric,
-                "status": "error",
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            })
+                batch_results.append({
+                    "matric": matric,
+                    "status": "success" if response.status_code == 200 else "failed",
+                    "timestamp": datetime.now().isoformat()
+                })
 
-        progress = (i + 1) / total_count * 100
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout for matric {matric}")
+                batch_results.append({
+                    "matric": matric,
+                    "status": "error",
+                    "error": "Request timed out",
+                    "timestamp": datetime.now().isoformat()
+                })
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Network error for {matric}: {str(e)}")
+                batch_results.append({
+                    "matric": matric,
+                    "status": "error",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as e:
+                logger.error(f"Unexpected error for {matric}: {str(e)}")
+                batch_results.append({
+                    "matric": matric,
+                    "status": "error",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                })
+
+            # Update progress after each request
+            progress = (len(results) + len(batch_results)) / total_count * 100
+
+        # Add batch results to main results
+        results.extend(batch_results)
+
+        # Log batch completion
+        logger.info(
+            f"Completed batch {i//batch_size + 1} of {(len(matric_numbers) + batch_size - 1)//batch_size}")
 
     return results
 
@@ -119,16 +152,25 @@ def read_excel_file(file):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    try:
+        logger.info("Serving home page")
+        return render_template("index.html")
+    except Exception as e:
+        logger.error(
+            f"Error serving home page: {str(e)}\n{traceback.format_exc()}")
+        return "Internal Server Error", 500
 
 
 @app.route("/process", methods=["POST"])
 def process():
-    global progress
+    global progress, total_count
     progress = 0
 
     try:
-        # Validate request data
+        logger.info("Received /process request")
+        logger.debug(f"Form data: {request.form}")
+        logger.debug(f"Files: {request.files}")
+
         if 'file' not in request.files:
             logger.error("No file part in request")
             return jsonify({"error": "No file uploaded"}), 400
@@ -137,11 +179,6 @@ def process():
         if not file.filename:
             logger.error("No file selected")
             return jsonify({"error": "No file selected"}), 400
-
-        # Check file extension
-        if not file.filename.lower().endswith(('.xlsx', '.xls')):
-            logger.error("Invalid file type")
-            return jsonify({"error": "Please upload a valid Excel file (.xlsx or .xls)"}), 400
 
         if 'url' not in request.form:
             logger.error("No URL provided")
@@ -153,15 +190,19 @@ def process():
         logger.info(
             f"Processing request - URL: {url}, File: {file.filename}, Column: {column}")
 
-        try:
-            df = read_excel_file(file)
-        except Exception as e:
-            logger.error(f"Failed to read Excel file: {str(e)}")
-            return jsonify({"error": str(e)}), 400
+        # Save file temporarily for debugging
+        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(temp_path)
+        logger.info(f"Saved file temporarily at: {temp_path}")
 
-        if df.empty:
-            logger.error("Excel file is empty")
-            return jsonify({"error": "The Excel file is empty"}), 400
+        try:
+            df = pd.read_excel(temp_path)
+            logger.info(
+                f"Successfully read Excel file. Columns: {df.columns.tolist()}")
+        except Exception as e:
+            logger.error(
+                f"Failed to read Excel file: {str(e)}\n{traceback.format_exc()}")
+            return jsonify({"error": f"Failed to read Excel file: {str(e)}"}), 400
 
         if column not in df.columns:
             available_columns = df.columns.tolist()
@@ -173,12 +214,11 @@ def process():
 
         matric_numbers = df[column].dropna().astype(
             str).str.strip().drop_duplicates().tolist()
+        logger.info(f"Found {len(matric_numbers)} matric numbers")
 
         if not matric_numbers:
             logger.error("No valid matric numbers found in the file")
             return jsonify({"error": "No valid matric numbers found in the selected column"}), 400
-
-        logger.info(f"Processing {len(matric_numbers)} matric numbers")
 
         results = process_data(url, matric_numbers)
         history_entry = update_history(len(matric_numbers), results)
@@ -187,14 +227,10 @@ def process():
             "status": "success",
             "message": "Process completed successfully",
             "results": results,
-            "history": history,
-            "total_processed": len(matric_numbers),
-            "successful": len([r for r in results if r["status"] == "success"]),
-            "failed": len([r for r in results if r["status"] == "failed"]),
-            "errors": len([r for r in results if r["status"] == "error"])
+            "history": history
         }
 
-        logger.info(f"Process completed: {response_data}")
+        logger.info("Process completed successfully")
         return jsonify(response_data)
 
     except Exception as e:
