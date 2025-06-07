@@ -96,8 +96,13 @@ $('#form').on('submit', function (e) {
     $('#error-count').text('0');
     $('#failed-count').text('0');
 
+    // Get the current hostname and port
+    const currentHost = window.location.hostname;
+    const currentPort = window.location.port || '5050';
+    const apiUrl = `${window.location.protocol}//${currentHost}:${currentPort}/process`;
+
     $.ajax({
-        url: '/process',
+        url: apiUrl,
         type: 'POST',
         data: formData,
         contentType: false,
@@ -123,18 +128,30 @@ $('#form').on('submit', function (e) {
         error: function (xhr, status, error) {
             let errorMessage = 'An error occurred.';
             try {
+                // Try to parse as JSON first
                 const response = JSON.parse(xhr.responseText);
-                errorMessage = response.error || errorMessage;
+                errorMessage = response.error || response.details || errorMessage;
             } catch (e) {
-                console.error('Error parsing response:', e);
+                // If not JSON, check if it's HTML
+                if (xhr.responseText.includes('<html>')) {
+                    errorMessage = 'Server Error: The application might need to be restarted. Please contact administrator.';
+                    console.error('Server returned HTML instead of JSON:', xhr.responseText);
+                } else {
+                    errorMessage = xhr.responseText || errorMessage;
+                }
             }
             $('#status').text('Error: ' + errorMessage);
-            console.error('Server response:', xhr.responseText);
+            console.error('Server error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText
+            });
         }
     });
 
+    const progressUrl = `${window.location.protocol}//${currentHost}:${currentPort}/progress`;
     const interval = setInterval(() => {
-        $.get('/progress', function (data) {
+        $.get(progressUrl, function (data) {
             const { progress, current, total } = data;
             updateProgress(current, total);
             if (progress >= 100) {
@@ -143,6 +160,10 @@ $('#form').on('submit', function (e) {
                 $('#step-processing').removeClass('active').addClass('disabled');
                 $('#step-done').removeClass('disabled').addClass('active');
             }
+        }).fail(function (xhr, status, error) {
+            console.error('Progress check failed:', error);
+            clearInterval(interval);
+            $('#status').text('Error: Failed to check progress');
         });
     }, 1000);
 }); 

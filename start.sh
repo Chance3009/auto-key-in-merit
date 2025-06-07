@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Create log directory if it doesn't exist
-mkdir -p /var/log/merit
+sudo mkdir -p /var/log/merit
 
 # Set proper permissions
-chown -R www-data:www-data /var/log/merit
+sudo chown -R chance30903:chance30903 /var/log/merit
 
 # Start Gunicorn with improved configuration
-gunicorn \
+exec gunicorn \
     --bind 0.0.0.0:5050 \
     --timeout 300 \
     --workers 2 \
