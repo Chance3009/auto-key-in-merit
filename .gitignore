@@ -31,3 +31,5 @@ Thumbs.db
 
 # Log files
 *.log 
+
+uploads/

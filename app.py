@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, url_for
+from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
 import pandas as pd
 import requests
 from datetime import datetime
@@ -37,6 +37,33 @@ progress = 0
 total_count = 0
 history = []  # Store history in memory instead of file
 
+# Error handlers
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal Server Error: {error}\n{traceback.format_exc()}")
+    return jsonify({
+        "error": "Internal Server Error",
+        "details": str(error)
+    }), 500
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({
+        "error": "Not Found",
+        "details": str(error)
+    }), 404
+
+
+@app.errorhandler(400)
+def bad_request_error(error):
+    return jsonify({
+        "error": "Bad Request",
+        "details": str(error)
+    }), 400
+
 
 def process_data(url, matric_numbers):
     global progress, total_count
@@ -53,25 +80,62 @@ def process_data(url, matric_numbers):
 
         for matric in batch:
             try:
-                # Simulate the POST request
+                # First get the page to get any necessary cookies/tokens
+                try:
+                    initial_response = session.get(
+                        url,
+                        headers={
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                            "Accept-Language": "en-US,en;q=0.9",
+                            "Connection": "keep-alive",
+                        },
+                        timeout=10
+                    )
+                    initial_response.raise_for_status()
+                except Exception as e:
+                    logger.error(f"Failed to get initial page: {str(e)}")
+                    raise
+
+                # Prepare the form data
                 payload = {
                     "user": matric.strip(),  # Ensure no whitespace
-                    "login": "Login"
+                    "login": "Login",
+                    "submit": "Submit"
                 }
 
+                # Add additional headers that might be required
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                    "Referer": url,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                    "Origin": url.split('/')[0] + '//' + url.split('/')[2],
+                    "Referer": url,
+                    "Connection": "keep-alive",
                 }
 
+                # Submit the form
                 response = session.post(
-                    url, data=payload, headers=headers, timeout=5)  # 5 second timeout per request
+                    url,
+                    data=payload,
+                    headers=headers,
+                    timeout=10,  # Increased timeout
+                    allow_redirects=True  # Follow redirects
+                )
+
+                # Log response details for debugging
+                logger.debug(f"Response status: {response.status_code}")
+                logger.debug(f"Response headers: {response.headers}")
+                # First 500 chars
+                logger.debug(f"Response content: {response.text[:500]}...")
+
+                # Check if the response indicates success
+                success = response.status_code == 200 and "error" not in response.text.lower()
 
                 batch_results.append({
                     "matric": matric,
-                    "status": "success" if response.status_code == 200 else "failed",
+                    "status": "success" if success else "failed",
                     "timestamp": datetime.now().isoformat()
                 })
 
@@ -184,11 +248,25 @@ def process():
             logger.error("No URL provided")
             return jsonify({"error": "URL is required"}), 400
 
-        url = request.form["url"]
+        url = request.form["url"].strip()
         column = request.form.get("column", "MATRIC")
 
         logger.info(
             f"Processing request - URL: {url}, File: {file.filename}, Column: {column}")
+
+        # Validate URL
+        if not url.startswith(('http://', 'https://')):
+            logger.error("Invalid URL format")
+            return jsonify({"error": "Invalid URL format. URL must start with http:// or https://"}), 400
+
+        # Test URL accessibility
+        try:
+            test_response = requests.get(url, timeout=5)
+            test_response.raise_for_status()
+            logger.info(f"URL test successful: {url}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"URL test failed: {str(e)}")
+            return jsonify({"error": f"Could not access the provided URL: {str(e)}"}), 400
 
         # Save file temporarily for debugging
         temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -219,6 +297,9 @@ def process():
         if not matric_numbers:
             logger.error("No valid matric numbers found in the file")
             return jsonify({"error": "No valid matric numbers found in the selected column"}), 400
+
+        # Log first few matric numbers for debugging
+        logger.debug(f"First few matric numbers: {matric_numbers[:5]}")
 
         results = process_data(url, matric_numbers)
         history_entry = update_history(len(matric_numbers), results)
@@ -255,6 +336,11 @@ def get_progress():
 @app.route("/history")
 def get_history():
     return jsonify(history)
+
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
 
 
 if __name__ == "__main__":

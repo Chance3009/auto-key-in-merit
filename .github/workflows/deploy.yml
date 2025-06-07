@@ -9,15 +9,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check SSH Key Format
+      - name: Debug SSH Key
         run: |
           echo "Checking SSH key format..."
           echo "${{ secrets.SSH_KEY }}" > deploy_key
           chmod 600 deploy_key
-          echo "Displaying key information:"
+          echo "Key file permissions:"
+          ls -la deploy_key
+          echo "Key file format check:"
           ssh-keygen -l -f deploy_key || echo "Invalid key format"
-          echo "Testing SSH connection:"
-          ssh -v -i deploy_key -o StrictHostKeyChecking=no -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 22 || echo "SSH test failed"
+          echo "SSH version:"
+          ssh -V
+          echo "Testing verbose SSH connection:"
+          ssh -vvv -i deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'echo "SSH Test"' || echo "SSH test failed"
           rm deploy_key
 
       - name: Deploy via SSH
@@ -29,8 +33,11 @@ jobs:
           port: 22
           debug: true
           command_timeout: 30m
+          use_insecure_cipher: false
+          cipher: aes256-ctr
           script: |
             echo "=== Deployment Started: $(date) ==="
+            echo "SSH User: $USER"
             echo "Current directory: $PWD"
             echo "Testing git access..."
             cd ~/auto-key-in-merit || echo "Failed to cd to directory"
@@ -46,3 +53,6 @@ jobs:
             echo "=== Deployment Completed: $(date) ==="
             # Log SSH access
             echo "Last SSH access: $(date)" >> ~/ssh_access.log
+            # Check SSH key in authorized_keys
+            echo "Checking authorized_keys:"
+            cat ~/.ssh/authorized_keys
