@@ -97,9 +97,7 @@ $('#form').on('submit', function (e) {
     $('#failed-count').text('0');
 
     // Get the current hostname and port
-    const currentHost = window.location.hostname;
-    const currentPort = window.location.port || '5050';
-    const apiUrl = `${window.location.protocol}//${currentHost}:${currentPort}/process`;
+    const apiUrl = '/process';
 
     $.ajax({
         url: apiUrl,
@@ -149,7 +147,7 @@ $('#form').on('submit', function (e) {
         }
     });
 
-    const progressUrl = `${window.location.protocol}//${currentHost}:${currentPort}/progress`;
+    const progressUrl = '/progress';
     const interval = setInterval(() => {
         $.get(progressUrl, function (data) {
             const { progress, current, total } = data;

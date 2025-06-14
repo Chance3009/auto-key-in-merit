@@ -6,6 +6,7 @@ import logging
 import traceback
 import os
 import sys
+from flask_cors import CORS
 
 # Configure logging to both file and console
 logging.basicConfig(
@@ -31,6 +32,7 @@ logger.info(f"Upload directory: {UPLOAD_FOLDER}")
 app = Flask(__name__,
             static_url_path='/static',
             static_folder='static')
+CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 progress = 0
@@ -344,11 +346,18 @@ def process():
 
 @app.route("/progress")
 def get_progress():
-    return jsonify({
-        "progress": progress,
-        "total": total_count,
-        "current": int(progress * total_count / 100)
-    })
+    try:
+        return jsonify({
+            "progress": progress,
+            "current": int(progress * total_count / 100) if total_count > 0 else 0,
+            "total": total_count
+        })
+    except Exception as e:
+        logger.error(f"Error getting progress: {str(e)}")
+        return jsonify({
+            "error": "Failed to get progress",
+            "details": str(e)
+        }), 500
 
 
 @app.route("/history")
