@@ -2,34 +2,63 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
+*.so
+.Python
+*.egg
+*.egg-info/
 dist/
 build/
-*.egg-info/
-
-# Virtual Environment
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
 venv/
+ENV/
 env/
 .env/
 .venv/
+.python-version
 
 # IDE specific files
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
+.project
+.pydevproject
+.settings/
 
 # OS specific files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Local development settings
 *.env
 .env.local
 .env.*.local
+.env.development
+.env.test
+.env.production
 
-# Log files
-*.log 
+# Logs and databases
+*.log
+*.sqlite
+*.db
+logs/
+log/
 
+# Application specific
 uploads/

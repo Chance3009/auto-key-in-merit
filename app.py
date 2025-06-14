@@ -8,26 +8,19 @@ import os
 import sys
 from flask_cors import CORS
 
-# Configure logging to both file and console
+# Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,  # Changed to INFO since DEBUG is too verbose
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('app.log'),
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout)  # Only log to console in production
     ]
 )
 logger = logging.getLogger(__name__)
 
-# Log startup information
-logger.info("Starting application...")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Current working directory: {os.getcwd()}")
-
 # Ensure upload directory exists
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-logger.info(f"Upload directory: {UPLOAD_FOLDER}")
 
 app = Flask(__name__,
             static_url_path='/static',
@@ -37,52 +30,38 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 progress = 0
 total_count = 0
-history = []  # Store history in memory instead of file
+history = []  # Store history in memory
 
-# Error handlers
+
+def create_error_response(error, status_code):
+    """Helper function to create error responses"""
+    logger.error(f"Error: {error}\n{traceback.format_exc()}")
+    response = jsonify({
+        "error": error.__class__.__name__,
+        "details": str(error) if app.debug else "An unexpected error occurred"
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, status_code
 
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.error(f"Internal Server Error: {error}\n{traceback.format_exc()}")
-    response = jsonify({
-        "error": "Internal Server Error",
-        "details": str(error)
-    })
-    response.headers['Content-Type'] = 'application/json'
-    return response, 500
+    return create_error_response(error, 500)
 
 
 @app.errorhandler(404)
 def not_found_error(error):
-    response = jsonify({
-        "error": "Not Found",
-        "details": str(error)
-    })
-    response.headers['Content-Type'] = 'application/json'
-    return response, 404
+    return create_error_response(error, 404)
 
 
 @app.errorhandler(400)
 def bad_request_error(error):
-    response = jsonify({
-        "error": "Bad Request",
-        "details": str(error)
-    })
-    response.headers['Content-Type'] = 'application/json'
-    return response, 400
+    return create_error_response(error, 400)
 
 
-# Add a catch-all error handler
 @app.errorhandler(Exception)
 def handle_exception(error):
-    logger.error(f"Unhandled Exception: {error}\n{traceback.format_exc()}")
-    response = jsonify({
-        "error": "Internal Server Error",
-        "details": str(error) if app.debug else "An unexpected error occurred"
-    })
-    response.headers['Content-Type'] = 'application/json'
-    return response, 500
+    return create_error_response(error, 500)
 
 
 def process_data(url, matric_numbers):
