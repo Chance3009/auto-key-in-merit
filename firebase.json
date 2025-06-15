@@ -15,8 +15,24 @@
         ],
         "rewrites": [
             {
-                "source": "**",
+                "source": "/app/**",
                 "function": "app"
+            },
+            {
+                "source": "/process",
+                "function": "app"
+            },
+            {
+                "source": "/progress",
+                "function": "app"
+            },
+            {
+                "source": "/history",
+                "function": "app"
+            },
+            {
+                "source": "**",
+                "destination": "/index.html"
             }
         ],
         "headers": [
