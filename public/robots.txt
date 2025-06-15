@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /process
+Disallow: /progress
+Disallow: /history
+
+Sitemap: https://merit-input-automation.web.app/sitemap.xml 
