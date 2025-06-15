@@ -217,6 +217,11 @@ def read_excel_file(file):
 def home():
     try:
         logger.info("Serving home page")
+        # Ensure the template exists
+        if not os.path.exists(os.path.join(app.template_folder, 'index.html')):
+            logger.error("index.html template not found")
+            return "Template not found", 500
+
         return render_template("index.html")
     except Exception as e:
         logger.error(
