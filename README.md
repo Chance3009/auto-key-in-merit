@@ -5,9 +5,11 @@ A web application for automating UPM's merit key-in processes on https://ekolej.
 ---
 
 ## Live Demo
-Accessible via: [https://auto-key-in-merit.onrender.com/](https://auto-key-in-merit.onrender.com/)
+Accessible via:
+- Firebase Hosting: [https://merit-input-automation.web.app/](https://merit-input-automation.web.app/)
+- Render (Backup): [https://auto-key-in-merit.onrender.com/](https://auto-key-in-merit.onrender.com/)
 
-Note: The demo runs on Render's free tier and may experience spin-down periods after 15 minutes of inactivity.
+Note: The Render demo runs on the free tier and may experience spin-down periods after 15 minutes of inactivity.
 
 ---
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import pandas as pd
 import requests
 from datetime import datetime

@@ -1,0 +1,46 @@
+{
+    "hosting": {
+        "public": "public",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**",
+            "venv/**",
+            "templates/**",
+            "app.py",
+            "main.py",
+            "requirements.txt",
+            "runtime.txt",
+            "render.yaml"
+        ],
+        "rewrites": [
+            {
+                "source": "**",
+                "function": "app"
+            }
+        ],
+        "headers": [
+            {
+                "source": "**",
+                "headers": [
+                    {
+                        "key": "Access-Control-Allow-Origin",
+                        "value": "*"
+                    },
+                    {
+                        "key": "Access-Control-Allow-Methods",
+                        "value": "GET, POST, OPTIONS"
+                    },
+                    {
+                        "key": "Access-Control-Allow-Headers",
+                        "value": "Content-Type"
+                    }
+                ]
+            }
+        ]
+    },
+    "functions": {
+        "source": ".",
+        "runtime": "python311"
+    }
+}
